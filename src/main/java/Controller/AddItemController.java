@@ -1,5 +1,6 @@
 package Controller;
 
+import java.io.File;
 import java.io.IOException;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -16,7 +17,7 @@ import vo.ItemImg;
 
 
 @WebServlet("/Fileupload")
-public class Fileupload extends HttpServlet {
+public class AddItemController extends HttpServlet {
 
 	// 상품등록 폼
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -43,35 +44,32 @@ public class Fileupload extends HttpServlet {
 
 		MultipartRequest mreq 
 			= new MultipartRequest(request, dir, maxFileSize, "utf-8", fp); // 5가지의 매개변수 (request,디렉토리,최대사이즈,인코딩방식,이름정책)
-			
-		// MultipartRequest로 원본 request를 랩핑후에는 스트림을 받을 필요없이
-		// MultipartRequest의 api를 사용하면된다
 		
-		// input type="text"
-		String itemName = mreq.getParameter("itemName"); // MultipartRequest.getParameter("itemName");
-		
-		// input type="file" 바이너리 파일은 마임타입형태의 파일로 변환되어 upload폴더에 자동으로 저장
+		// 이미지파일 검사 -> (jpg와 png 이외의 타입은 불허)
 		String contentType = mreq.getContentType("itemImg");
-		String originalFileName = mreq.getOriginalFileName("itemImg"); // 원본 파일 이름
-		String fileSystemName = mreq.getFilesystemName("itemImg"); // 저장된 파일 이름(Default)
+		if(contentType.equals("image/jpg") || contentType.equals("image/png")) {			
+			String itemName = mreq.getParameter("itemName"); // MultipartRequest.getParameter("itemName");
+			String fileSystemName = mreq.getFilesystemName("itemImg"); // 저장된 파일 이름(Default)
+			
+			Item item = new Item();
+			item.setItemName(itemName);
+			
+			ItemImg itemImg = new ItemImg();
+			itemImg.setFilename(fileSystemName);
+			
+			this.itemService = new ItemService();
+			
+			itemService.addItem(item, itemImg, dir);
+			System.out.println("업로드 성공");
+		} else {
+			System.out.println("*.jpg, *.png파일만 업로드 가능");
+			File f = new File(dir+"\\"+mreq.getFilesystemName("itemImg"));
+			if(f.exists()) {
+				f.delete(); // 이미지가 아닌 파일이 업로드 되었기때문에 삭제
+			}
+		}
+			
 		
-		System.out.println("---문자열 매개값---");
-		System.out.println(itemName);
-		
-		System.out.println("---파일 매개값---");
-		System.out.println(contentType);
-		System.out.println(originalFileName);
-		System.out.println(fileSystemName);
-		
-		Item item = new Item();
-		item.setItemName(itemName);
-		
-		ItemImg itemImg = new ItemImg();
-		itemImg.setFilename(fileSystemName);
-		
-		this.itemService = new ItemService();
-		
-		itemService.addItem(item, itemImg, dir);
 		
 		response.sendRedirect(request.getContextPath()+"/Fileupload");
 	}
